@@ -13,6 +13,10 @@ import java.util.List;
 import model.Transaction;
 import model.TransactionDetail;
 
+/**
+ *
+ * @author Muhammad Sabiq AZ
+ */
 public class TransactionDAO {
     // Get all Transactions milik toko manager ini
     // Filter: kasir yang melakukan transaksi harus punya manager_id yang sama
@@ -174,69 +178,30 @@ public class TransactionDAO {
         return list;
     }
 
-    // Data transaksi per shift — untuk chart dashboard
-    public List<Object[]> getShiftData(int managerId) {
+    // Busy Hours — hanya dari transaksi kasir di toko manager ini
+    public List<Object[]> getHourlyData(int managerId) {
         List<Object[]> list = new ArrayList<>();
         try {
             Connection conn = DatabaseConnection.getConnection();
-            String sql = "SELECT "
-                       + "CASE "
-                       + "  WHEN HOUR(t.tanggal) >= 6  AND HOUR(t.tanggal) < 12 THEN 'Pagi' "
-                       + "  WHEN HOUR(t.tanggal) >= 12 AND HOUR(t.tanggal) < 17 THEN 'Siang' "
-                       + "  WHEN HOUR(t.tanggal) >= 17 AND HOUR(t.tanggal) < 21 THEN 'Sore' "
-                       + "  ELSE 'Malam' "
-                       + "END AS shift_name, "
-                       + "COUNT(*) AS jumlah "
+            String sql = "SELECT HOUR(t.tanggal) AS jam, COUNT(*) AS jumlah "
                        + "FROM transactions t "
                        + "JOIN users u ON t.kasir_id = u.id "
                        + "WHERE u.manager_id = ? "
-                       + "GROUP BY shift_name "
-                       + "ORDER BY FIELD(shift_name, 'Pagi', 'Siang', 'Sore', 'Malam')";
+                       + "GROUP BY HOUR(t.tanggal)";
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setInt(1, managerId);
             ResultSet rs = ps.executeQuery();
             
             while (rs.next()) {
                 Object[] data = new Object[2];
-                data[0] = rs.getString("shift_name");
+                data[0] = rs.getInt("jam");
                 data[1] = rs.getInt("jumlah");
                 list.add(data);
             }
         } catch (Exception e) {
-            System.out.println("Error di getShiftData: " + e.getMessage());
+            System.out.println("Error di getHourlyData: " + e.getMessage());
         }
         return list;
-    }
-
-    // Ambil satu transaksi berdasarkan id — divalidasi juga bahwa kasir milik manager ini
-    public Transaction getById(int id, int managerId) {
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            String sql = "SELECT t.*, u.username AS kasir_name "
-                       + "FROM transactions t "
-                       + "LEFT JOIN users u ON t.kasir_id = u.id "
-                       + "WHERE t.id = ? AND u.manager_id = ?";
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setInt(1, id);
-            ps.setInt(2, managerId);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                Transaction t = new Transaction();
-                t.setId(rs.getInt("id"));
-                t.setNoNota(rs.getString("no_nota"));
-                t.setTanggal(rs.getString("tanggal"));
-                t.setTotalBelanja(rs.getLong("total_belanja"));
-                t.setUangTunai(rs.getLong("uang_tunai"));
-                t.setKembalian(rs.getLong("kembalian"));
-                t.setStatus(rs.getString("status"));
-                t.setKasirName(rs.getString("kasir_name"));
-                return t;
-            }
-        } catch (Exception e) {
-            System.out.println("Error di getById Transaction: " + e.getMessage());
-        }
-        return null;
     }
 
     // Get All Detail Transactions (tidak perlu filter manager — sudah lewat transaction_id)

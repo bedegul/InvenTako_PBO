@@ -12,6 +12,10 @@ import java.util.ArrayList;
 import java.util.List;
 import model.Product;
 
+/**
+ *
+ * @author Muhammad Sabiq AZ
+ */
 public class ProductDAO {
     // Ambil semua produk milik manager tertentu
     public List<Product> getAll(int managerId) {
@@ -39,47 +43,6 @@ public class ProductDAO {
             System.out.println("Error di getAll Produk: " + e.getMessage());
         }
         return list;
-    }
-
-    // Cek apakah kode barang sudah ada di toko manager ini
-    public boolean isKodeExists(String kode, int managerId) {
-        boolean exists = false;
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            String sql = "SELECT COUNT(*) FROM products WHERE kode = ? AND manager_id = ?";
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setString(1, kode);
-            ps.setInt(2, managerId);
-            ResultSet rs = ps.executeQuery();
-            
-            if (rs.next()) {
-                exists = rs.getInt(1) > 0;
-            }
-        } catch (Exception e) {
-            System.out.println("Error di isKodeExists: " + e.getMessage());
-        }
-        return exists;
-    }
-
-    // Cek duplikat kode, tapi abaikan barang yang sedang diedit (excludeId)
-    public boolean isKodeExistsExcept(String kode, int managerId, int excludeId) {
-        boolean exists = false;
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            String sql = "SELECT COUNT(*) FROM products WHERE kode = ? AND manager_id = ? AND id != ?";
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setString(1, kode);
-            ps.setInt(2, managerId);
-            ps.setInt(3, excludeId);
-            ResultSet rs = ps.executeQuery();
-            
-            if (rs.next()) {
-                exists = rs.getInt(1) > 0;
-            }
-        } catch (Exception e) {
-            System.out.println("Error di isKodeExistsExcept: " + e.getMessage());
-        }
-        return exists;
     }
 
     // Insert produk baru, otomatis set manager_id

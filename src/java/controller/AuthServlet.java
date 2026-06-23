@@ -12,6 +12,11 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import model.User;
 
+/**
+ *
+ * @author Muhammad Sabiq AZ
+ */
+
 @WebServlet(name = "AuthServlet", urlPatterns = {"/AuthServlet"})
 public class AuthServlet extends HttpServlet {
 
@@ -88,6 +93,40 @@ public class AuthServlet extends HttpServlet {
             } else {
                 request.setAttribute("errorMessage", "Registrasi gagal! Email mungkin sudah dipakai.");
                 request.getRequestDispatcher("register.jsp").forward(request, response);
+            }
+
+        //Approve user (admin action)
+        } else if ("approve".equals(action)) {
+            String userIdStr = request.getParameter("userId");
+            if (userIdStr != null && !userIdStr.isEmpty()) {
+                try {
+                    int userId = Integer.parseInt(userIdStr);
+                    boolean berhasil = dao.updateUserStatus(userId, "approved");
+                    if (berhasil) {
+                        response.sendRedirect("admin/kelola_manager.jsp?success=approve");
+                    } else {
+                        response.sendRedirect("admin/kelola_manager.jsp?error=true");
+                    }
+                } catch (NumberFormatException e) {
+                    response.sendRedirect("admin/kelola_manager.jsp?error=true");
+                }
+            }
+
+        //Decline user (admin action)
+        } else if ("decline".equals(action)) {
+            String userIdStr = request.getParameter("userId");
+            if (userIdStr != null && !userIdStr.isEmpty()) {
+                try {
+                    int userId = Integer.parseInt(userIdStr);
+                    boolean berhasil = dao.updateUserStatus(userId, "decline");
+                    if (berhasil) {
+                        response.sendRedirect("admin/kelola_manager.jsp?success=decline");
+                    } else {
+                        response.sendRedirect("admin/kelola_manager.jsp?error=true");
+                    }
+                } catch (NumberFormatException e) {
+                    response.sendRedirect("admin/kelola_manager.jsp?error=true");
+                }
             }
 
         //Default

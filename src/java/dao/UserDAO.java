@@ -5,7 +5,6 @@
 package dao;
 
 import database.DatabaseConnection;
-import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -13,39 +12,19 @@ import java.util.ArrayList;
 import java.util.List;
 import model.Kasir;
 import model.User;
-
+/**
+ *
+ * @author Muhammad Sabiq AZ
+ */
 public class UserDAO {
-
-    /**
-     * Hash password menggunakan SHA-256.
-     * Digunakan pada: login, register, tambahKasir.
-     * @param password password plain text
-     * @return hex string SHA-256, atau password asli jika gagal (fallback)
-     */
-    public static String hashPassword(String password) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] bytes = md.digest(password.getBytes("UTF-8"));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : bytes) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            System.out.println("Error hashing password: " + e.getMessage());
-            return password; // fallback: kembalikan plain text jika gagal
-        }
-    }
-
     public User login(String email, String password) {
         User user = null;
         try {
             Connection conn = DatabaseConnection.getConnection();
-            // Bandingkan password yang sudah di-hash
             String sql = "SELECT * FROM users WHERE email=? AND password=?";
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setString(1, email);
-            ps.setString(2, hashPassword(password)); // hash sebelum query
+            ps.setString(2, password);
             
             ResultSet rs = ps.executeQuery();
             
@@ -77,7 +56,7 @@ public class UserDAO {
             
             ps.setString(1, u.getUsername());
             ps.setString(2, u.getEmail());
-            ps.setString(3, hashPassword(u.getPassword())); // hash sebelum simpan
+            ps.setString(3, u.getPassword());
             ps.setString(4, u.getRole());
             
             int jumlahBaris = ps.executeUpdate();
@@ -100,7 +79,7 @@ public class UserDAO {
             
             ps.setString(1, u.getUsername());
             ps.setString(2, u.getEmail());
-            ps.setString(3, hashPassword(u.getPassword())); // hash sebelum simpan
+            ps.setString(3, u.getPassword());
             ps.setString(4, u.getRole());
             ps.setString(5, u.getShift());
             ps.setInt(6, u.getManagerId());
@@ -158,6 +137,61 @@ public class UserDAO {
             }
         } catch (Exception e) {
             System.out.println("Error di deleteKasir: " + e.getMessage());
+        }
+        return berhasil;
+    }
+
+    // Ambil semua user dengan status pending (untuk admin approve/decline)
+    public List<User> getPendingUsers() {
+        List<User> list = new ArrayList<>();
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            String sql = "SELECT * FROM users WHERE status='pending' ORDER BY id DESC";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+            
+            while (rs.next()) {
+                User u = new User();
+                u.setId(rs.getInt("id"));
+                u.setUsername(rs.getString("username"));
+                u.setEmail(rs.getString("email"));
+                u.setRole(rs.getString("role"));
+                u.setStatus(rs.getString("status"));
+                
+                list.add(u);
+            }
+        } catch (Exception e) {
+            System.out.println("Error di getPendingUsers: " + e.getMessage());
+        }
+        return list;
+    }
+
+    // Update status user (approve atau decline)
+    public boolean updateUserStatus(int id, String status) {
+        boolean berhasil = false;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            // Jika decline, hapus user; jika approve, ubah status jadi 'approved'
+            if ("decline".equals(status)) {
+                String sql = "DELETE FROM users WHERE id=?";
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ps.setInt(1, id);
+                int jumlahBaris = ps.executeUpdate();
+                if (jumlahBaris > 0) {
+                    berhasil = true;
+                }
+            } else if ("approved".equals(status)) {
+                String sql = "UPDATE users SET status=? WHERE id=?";
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ps.setString(1, "approved");
+                ps.setInt(2, id);
+                int jumlahBaris = ps.executeUpdate();
+                if (jumlahBaris > 0) {
+                    berhasil = true;
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error di updateUserStatus: " + e.getMessage());
         }
         return berhasil;
     }
